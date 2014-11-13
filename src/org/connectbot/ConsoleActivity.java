@@ -439,6 +439,19 @@ public class ConsoleActivity extends Activity {
 				hideEmulatedKeys();
 			}
 		});
+		
+		final ImageView tabButton = (ImageView) findViewById(R.id.button_tab);
+		tabButton.setOnClickListener(new OnClickListener() {
+			public void onClick(View view) {
+				View flip = findCurrentView(R.id.console_flip);
+				if (flip == null) return;
+				TerminalView terminal = (TerminalView)flip;
+
+				TerminalKeyListener handler = terminal.bridge.getKeyHandler();
+				handler.sendTab();
+				hideEmulatedKeys();
+			}
+		});
 
 		actionBar = ActionBarWrapper.getActionBar(this);
 		actionBar.setDisplayHomeAsUpEnabled(true);
@@ -618,6 +631,14 @@ public class ConsoleActivity extends Activity {
 						&& event.getEventTime() - event.getDownTime() < CLICK_TIME
 						&& Math.abs(event.getX() - lastX) < MAX_CLICK_DISTANCE
 						&& Math.abs(event.getY() - lastY) < MAX_CLICK_DISTANCE) {
+
+					if (event.getX() > flip.getWidth() * 11/ 12 ) {
+						((vt320)terminal.bridge.buffer).keyPressed(vt320.KEY_RIGHT, ' ', 0);
+						return true;
+					} else if (event.getX() < flip.getWidth() / 12) {
+						((vt320)terminal.bridge.buffer).keyPressed(vt320.KEY_LEFT, ' ', 0);
+						return true;
+					}
 					showEmulatedKeys();
 				}
 
