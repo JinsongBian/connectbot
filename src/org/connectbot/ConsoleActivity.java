@@ -52,19 +52,20 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
-import android.view.Window;
-import android.view.WindowManager;
-import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewConfiguration;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -74,8 +75,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
-import android.widget.AdapterView.OnItemClickListener;
-
 import de.mud.terminal.vt320;
 
 public class ConsoleActivity extends Activity {
@@ -439,7 +438,7 @@ public class ConsoleActivity extends Activity {
 				hideEmulatedKeys();
 			}
 		});
-		
+
 		final ImageView tabButton = (ImageView) findViewById(R.id.button_tab);
 		tabButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View view) {
@@ -470,6 +469,7 @@ public class ConsoleActivity extends Activity {
 		// detect fling gestures to switch between terminals
 		final GestureDetector detect = new GestureDetector(new GestureDetector.SimpleOnGestureListener() {
 			private float totalY = 0;
+			private boolean longPress = false;
 
 			@Override
 			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
@@ -478,20 +478,42 @@ public class ConsoleActivity extends Activity {
 				final float disty = e2.getRawY() - e1.getRawY();
 				final int goalwidth = flip.getWidth() / 2;
 
-				// need to slide across half of display to trigger console change
-				// make sure user kept a steady hand horizontally
-				if (Math.abs(disty) < (flip.getHeight() / 4)) {
-					if (distx > goalwidth) {
-						shiftCurrentTerminal(SHIFT_RIGHT);
-						return true;
+				if (longPress) {
+					longPress = false;
+					// need to slide across half of display to trigger console change
+					// make sure user kept a steady hand horizontally
+					if (Math.abs(disty) < (flip.getHeight() / 4)) {
+						if (distx > goalwidth) {
+							shiftCurrentTerminal(SHIFT_RIGHT);
+							return true;
+						}
+
+						if (distx < -goalwidth) {
+							shiftCurrentTerminal(SHIFT_LEFT);
+							return true;
+						}
 					}
 
-					if (distx < -goalwidth) {
-						shiftCurrentTerminal(SHIFT_LEFT);
-						return true;
-					}
+				} else {
+					View flip = findCurrentView(R.id.console_flip);
+					if(flip == null) return false;
+					TerminalView terminal = (TerminalView)flip;
+					// need to slide across half of display to trigger console change
+					// make sure user kept a steady hand horizontally
+					if (Math.abs(disty) < (flip.getHeight() / 4)) {
+						if (distx > goalwidth) {
+							((vt320)terminal.bridge.buffer).keyPressed(vt320.KEY_DOWN, ' ', 0);
+							return true;
+						}
 
+						if (distx < -goalwidth) {
+							((vt320)terminal.bridge.buffer).keyPressed(vt320.KEY_UP, ' ', 0);
+							return true;
+						}
+
+					}
 				}
+
 
 				return false;
 			}
@@ -499,6 +521,10 @@ public class ConsoleActivity extends Activity {
 
 			@Override
 			public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+
+				if (longPress) {
+					longPress = false;
+				}
 
 				// if copying, then ignore
 				if (copySource != null && copySource.isSelectingForCopy())
@@ -553,6 +579,10 @@ public class ConsoleActivity extends Activity {
 				return false;
 			}
 
+			@Override
+			public void onLongPress(MotionEvent e) {
+				longPress = true;
+			}
 
 		});
 
@@ -560,6 +590,10 @@ public class ConsoleActivity extends Activity {
 		flip.setOnTouchListener(new OnTouchListener() {
 
 			public boolean onTouch(View v, MotionEvent event) {
+
+				View flip = findCurrentView(R.id.console_flip);
+				if(flip == null) return false;
+				TerminalView terminal = (TerminalView)flip;
 
 				// when copying, highlight the area
 				if (copySource != null && copySource.isSelectingForCopy()) {

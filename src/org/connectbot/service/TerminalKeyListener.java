@@ -178,6 +178,15 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 					bridge.decreaseFontSize();
 					return true;
 				}
+			} else {
+				if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+					((vt320) buffer).keyPressed(vt320.KEY_UP, ' ',getStateForBuffer());
+					return true;
+				} else if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+					((vt320) buffer).keyPressed(vt320.KEY_DOWN, ' ',getStateForBuffer());
+					return true;
+				}
+
 			}
 
 			bridge.resetScrollPosition();
@@ -441,6 +450,10 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 
 	public void sendEscape() {
 		((vt320)buffer).keyTyped(vt320.KEY_ESCAPE, ' ', 0);
+	}
+
+	public void sendTab() {
+	((vt320)buffer).keyTyped(0,'\t',0);
 	}
 
 	/**
